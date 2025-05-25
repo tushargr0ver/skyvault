@@ -97,34 +97,6 @@ export default function StoragePage() {
           </CardContent>
         </Card>
 
-        {/* File Type Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle>File Types</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(fileTypeStats).map(([type, stats]) => {
-                const Icon = getTypeIcon(type)
-                const colorClass = getTypeColor(type)
-
-                return (
-                  <div key={type} className="flex items-center gap-3 p-3 rounded-lg border">
-                    <div className={`p-2 rounded-md bg-muted`}>
-                      <Icon className={`h-4 w-4 ${colorClass}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium capitalize">{type}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {stats.count} files • {formatBytes(stats.size)}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-3">
