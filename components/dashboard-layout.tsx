@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Cloud, Search, Upload, FolderOpen, Settings, User, LogOut, Home, Menu, X } from "lucide-react"
+import { Cloud, Search, Settings, User, LogOut, Home, Menu, X, Clock, HardDrive } from "lucide-react"
 import Link from "next/link"
 
 interface DashboardLayoutProps {
@@ -25,10 +25,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Home, current: true },
-    { name: "Upload", href: "/dashboard/upload", icon: Upload, current: false },
-    { name: "Folders", href: "/dashboard/folders", icon: FolderOpen, current: false },
-    { name: "Settings", href: "/dashboard/settings", icon: Settings, current: false },
+    { name: "All Files", href: "/dashboard", icon: Home },
+    { name: "Recent", href: "/dashboard/recent", icon: Clock },
+    { name: "Storage", href: "/dashboard/storage", icon: HardDrive },
   ]
 
   return (
@@ -102,23 +101,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           <div className="flex h-full flex-col pt-16 md:pt-0">
             <nav className="flex-1 space-y-1 p-4">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`
-                    group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
-                    ${
-                      item.current
-                        ? "bg-sky-100 text-sky-900 dark:bg-sky-900/50 dark:text-sky-100"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }
-                  `}
-                >
-                  <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const isActive = typeof window !== "undefined" && window.location.pathname === item.href
+
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`
+                      group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                      ${
+                        isActive
+                          ? "bg-sky-100 text-sky-900 dark:bg-sky-900/50 dark:text-sky-100"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }
+                    `}
+                  >
+                    <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                    {item.name}
+                  </Link>
+                )
+              })}
             </nav>
           </div>
         </aside>

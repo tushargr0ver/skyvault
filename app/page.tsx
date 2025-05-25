@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Cloud, Shield, Upload, FolderOpen, Download } from "lucide-react"
 import Link from "next/link"
 
+import {SignInButton, SignUpButton} from "@clerk/nextjs"
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-slate-900 dark:to-slate-800">
@@ -15,10 +17,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center space-x-4">
             <Button variant="ghost" asChild>
-              <Link href="/dashboard">Dashboard</Link>
+            <SignInButton>Dashboard</SignInButton>
             </Button>
             <Button asChild>
-              <Link href="/dashboard">Get Started</Link>
+              <SignUpButton>Get Started</SignUpButton>
             </Button>
           </div>
         </nav>
@@ -41,9 +43,11 @@ export default function LandingPage() {
                 Start Storing
               </Link>
             </Button>
+            <Link href="#learn-more-section">
             <Button size="lg" variant="outline" className="text-lg px-8 py-3">
               Learn More
             </Button>
+            </Link>
           </div>
 
           {/* Hero Image */}
@@ -69,6 +73,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
+      <section id="learn-more-section">
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">
@@ -117,6 +122,7 @@ export default function LandingPage() {
           </Card>
         </div>
       </section>
+      </section>
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20">
@@ -139,7 +145,7 @@ export default function LandingPage() {
             <Cloud className="h-6 w-6 text-sky-600" />
             <span className="text-lg font-semibold text-slate-900 dark:text-white">SkyVault</span>
           </div>
-          <p className="text-slate-600 dark:text-slate-400">© 2024 SkyVault. All rights reserved.</p>
+          <p className="text-slate-600 dark:text-slate-400">© {new Date().getFullYear()} SkyVault. All rights reserved.</p>
         </div>
       </footer>
     </div>

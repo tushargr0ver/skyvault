@@ -122,7 +122,7 @@ export function FileUpload({ onUpload }: FileUploadProps) {
               <Upload className="mr-2 h-4 w-4" />
               Choose Files
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">Maximum file size: 100MB</p>
+            <p className="text-xs text-muted-foreground mt-2">Maximum file size: 10 MB</p>
           </div>
         </CardContent>
       </Card>
