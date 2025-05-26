@@ -7,9 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Upload, X, File, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
+import { useAuth } from "@clerk/nextjs"
 
 interface FileUploadProps {
   onUpload: (files: any[]) => void
+  bucketName?: string
 }
 
 interface UploadingFile {
@@ -19,11 +22,21 @@ interface UploadingFile {
   status: "uploading" | "completed" | "error"
 }
 
-export function FileUpload({ onUpload }: FileUploadProps) {
+export function FileUpload({ onUpload, bucketName = "user-files" }: FileUploadProps) {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([])
   const { toast } = useToast()
+  const { userId } = useAuth()
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (!userId) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to upload files",
+        variant: "destructive",
+      })
+      return
+    }
+
     const newUploadingFiles = acceptedFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
@@ -33,51 +46,95 @@ export function FileUpload({ onUpload }: FileUploadProps) {
 
     setUploadingFiles((prev) => [...prev, ...newUploadingFiles])
 
-    // Simulate upload progress
+    // Upload files to Supabase
     newUploadingFiles.forEach((uploadingFile) => {
-      simulateUpload(uploadingFile)
+      uploadToSupabase(uploadingFile)
     })
-  }, [])
+  }, [userId, bucketName, toast])
 
-  const simulateUpload = (uploadingFile: UploadingFile) => {
-    const interval = setInterval(() => {
+  const uploadToSupabase = async (uploadingFile: UploadingFile) => {
+    if (!userId) return
+
+    try {
+      const fileExt = uploadingFile.file.name.split('.').pop()
+      const fileName = `${Math.random().toString(36).substr(2, 9)}.${fileExt}`
+      // Store files in user-specific folders
+      const filePath = `${userId}/${fileName}`
+
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, uploadingFile.file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) throw error
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath)
+
+      console.log('Generated URL:', publicUrl)
+
+      // Create file data
+      const fileData = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: uploadingFile.file.name,
+        size: uploadingFile.file.size,
+        type: uploadingFile.file.type,
+        uploadedAt: new Date().toISOString(),
+        url: publicUrl,
+        path: filePath,
+        userId: userId
+      }
+
+      onUpload([fileData])
+
       setUploadingFiles((prev) =>
         prev.map((file) => {
           if (file.id === uploadingFile.id) {
-            const newProgress = Math.min(file.progress + Math.random() * 30, 100)
-            if (newProgress >= 100) {
-              clearInterval(interval)
-
-              // Create mock file data
-              const mockFile = {
-                id: Math.random().toString(36).substr(2, 9),
-                name: file.file.name,
-                size: file.file.size,
-                type: file.file.type,
-                uploadedAt: new Date().toISOString(),
-                url: URL.createObjectURL(file.file),
-              }
-
-              onUpload([mockFile])
-
-              toast({
-                title: "Upload completed",
-                description: `${file.file.name} has been uploaded successfully.`,
-              })
-
-              // Remove from uploading files after a delay
-              setTimeout(() => {
-                setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadingFile.id))
-              }, 2000)
-
-              return { ...file, progress: 100, status: "completed" as const }
-            }
-            return { ...file, progress: newProgress }
+            return { ...file, progress: 100, status: "completed" as const }
           }
           return file
-        }),
+        })
       )
-    }, 200)
+
+      toast({
+        title: "Upload completed",
+        description: `${uploadingFile.file.name} has been uploaded successfully.`,
+      })
+
+      // Remove from uploading files after a delay
+      setTimeout(() => {
+        setUploadingFiles((prev) => prev.filter((f) => f.id !== uploadingFile.id))
+      }, 2000)
+
+    } catch (error: any) {
+      console.error('Error uploading file:', error)
+      
+      let errorMessage = `Failed to upload ${uploadingFile.file.name}`
+      if (error.statusCode === 403) {
+        errorMessage = `Access denied. Please check storage bucket permissions.`
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
+      setUploadingFiles((prev) =>
+        prev.map((file) => {
+          if (file.id === uploadingFile.id) {
+            return { ...file, status: "error" as const }
+          }
+          return file
+        })
+      )
+
+      toast({
+        title: "Upload failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    }
   }
 
   const removeUploadingFile = (id: string) => {
@@ -87,7 +144,7 @@ export function FileUpload({ onUpload }: FileUploadProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 50 * 1024 * 1024, // 50MB
     onDropRejected: (rejectedFiles) => {
       rejectedFiles.forEach((rejection) => {
         toast({
@@ -122,7 +179,7 @@ export function FileUpload({ onUpload }: FileUploadProps) {
               <Upload className="mr-2 h-4 w-4" />
               Choose Files
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">Maximum file size: 10 MB</p>
+            <p className="text-xs text-muted-foreground mt-2">Maximum file size: 50 MB</p>
           </div>
         </CardContent>
       </Card>
@@ -138,6 +195,8 @@ export function FileUpload({ onUpload }: FileUploadProps) {
                   <div className="flex-shrink-0">
                     {file.status === "completed" ? (
                       <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : file.status === "error" ? (
+                      <X className="h-5 w-5 text-red-500" />
                     ) : (
                       <File className="h-5 w-5 text-muted-foreground" />
                     )}

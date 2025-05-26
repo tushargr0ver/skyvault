@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { FileUpload } from "@/components/file-upload"
 import { FileGrid } from "@/components/file-grid"
@@ -10,12 +10,59 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Grid, List, Search, SortAsc } from "lucide-react"
 import { mockFiles } from "@/lib/mock-data"
+import { useAuth } from "@clerk/nextjs"
+import { supabase } from "@/lib/supabase"
 
 export default function Dashboard() {
+  const { userId } = useAuth()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("name")
   const [files, setFiles] = useState(mockFiles)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchUserFiles() {
+      if (!userId) return
+
+      try {
+        const { data, error } = await supabase.storage
+          .from('user-files')
+          .list(`${userId}/`)
+
+        if (error) throw error
+
+        // Transform the data to match your file interface
+        const userFiles = await Promise.all(
+          data.map(async (file) => {
+            const { data: { publicUrl } } = supabase.storage
+              .from('user-files')
+              .getPublicUrl(`${userId}/${file.name}`)
+
+            return {
+              id: file.id,
+              name: file.name,
+              size: file.metadata?.size || 0,
+              type: file.metadata?.mimetype || 'application/octet-stream',
+              uploadedAt: file.created_at,
+              url: publicUrl,
+              path: `${userId}/${file.name}`
+            }
+          })
+        )
+        
+        setFiles(userFiles)
+      } catch (error) {
+        console.error('Error fetching files:', error)
+        // Keep mock files as fallback
+        setFiles(mockFiles)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserFiles()
+  }, [userId])
 
   const filteredFiles = files
     .filter((file) => file.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -42,6 +89,16 @@ export default function Dashboard() {
 
   const handleFileRename = (fileId: string, newName: string) => {
     setFiles((prev) => prev.map((file) => (file.id === fileId ? { ...file, name: newName } : file)))
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
