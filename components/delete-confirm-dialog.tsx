@@ -15,13 +15,13 @@ interface DeleteConfirmDialogProps {
   file: any
   open: boolean
   onClose: () => void
-  onDelete: (fileId: string) => void
+  onDelete: (fileId: string, size: number) => void
 }
 
 export function DeleteConfirmDialog({ file, open, onClose, onDelete }: DeleteConfirmDialogProps) {
   const handleDelete = () => {
     if (file) {
-      onDelete(file.name)
+      onDelete(file.name, -(file.size))
       onClose()
     }
   }

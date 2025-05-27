@@ -12,7 +12,7 @@ import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog"
 
 interface FileListProps {
   files: any[]
-  onDelete: (fileId: string) => void
+  onDelete: (fileId: string, size: number) => void
   onRename: (fileId: string, newName: string) => void
 }
 

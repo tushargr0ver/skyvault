@@ -55,9 +55,9 @@ export default function RecentFilesPage() {
     return fileDate < yesterday
   })
 
-  const handleFileDelete = async (fileId: string) => {
+  const handleFileDelete = async (fileId: string, size: number) => {
     setFiles((prev) => prev.filter((file) => file.name !== fileId))
-    await deleteUserFile(fileId)
+    await deleteUserFile(fileId, size)
     await fetchUserFiles()
   }
 
@@ -67,11 +67,20 @@ export default function RecentFilesPage() {
     await fetchUserFiles()
   }
 
-  async function deleteUserFile(fileName: string) {
+  async function deleteUserFile(fileName: string, size: number) {
     const filePath = `${userId}/${fileName}`
     const { error } = await supabase.storage
       .from('user-files')
       .remove([filePath])
+    updateStorage(size)
+  }
+
+  async function updateStorage(size: number) {
+    const response = await fetch("/api/storage", {
+      method: "POST",
+      body: JSON.stringify({size}),
+    })
+    const data = await response.json()
   }
 
   async function renameUserFile(oldFilename: string, newFilename: string) {

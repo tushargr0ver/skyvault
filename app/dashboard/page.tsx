@@ -56,9 +56,9 @@ export default function Dashboard() {
     await fetchUserFiles()
   }
 
-  const handleFileDelete = async (fileId: string) => {
+  const handleFileDelete = async (fileId: string, size: number) => {
     setFiles((prev) => prev.filter((file) => file.name !== fileId))
-    await deleteUserFile(fileId)
+    await deleteUserFile(fileId, size)
     await fetchUserFiles()
   }
 
@@ -78,12 +78,14 @@ export default function Dashboard() {
     )
   }
   
-  async function deleteUserFile(fileName: string) {
+  async function deleteUserFile(fileName: string, size: number) {
     const filePath = `${userId}/${fileName}`  // Construct the full path
     const { error } = await supabase.storage
       .from('user-files')  // Remove the userId from the bucket name
       .remove([filePath])  // Use the full path
+    updateStorage(size)
   }
+
 
   async function renameUserFile(oldFilename: string, newFilename: string) {
     const oldPath = `${userId}/${oldFilename}`
@@ -154,6 +156,14 @@ export default function Dashboard() {
     }
   }
 
+  async function updateStorage(size: number) {
+    const response = await fetch("/api/storage", {
+      method: "POST",
+      body: JSON.stringify({size}),
+    })
+    const data = await response.json()
+  }
+  
   return (
     <DashboardLayout>
       <div className="space-y-6">

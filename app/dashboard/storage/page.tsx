@@ -4,26 +4,25 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { HardDrive, FileText, ImageIcon, Video, Music, Archive } from "lucide-react"
-import { mockFiles } from "@/lib/mock-data"
+import { useEffect, useState } from "react"
 
 export default function StoragePage() {
-  // Calculate storage statistics from mock data
-  const totalSize = mockFiles.reduce((acc, file) => acc + file.size, 0)
+  const [totalSize, setTotalSize] = useState(0)
+  const [totalFiles, setTotalFiles] = useState(0)
+  async function getStorage() {
+    const response = await fetch("/api/storage")
+    const data = await response.json()
+    setTotalSize(data.storage[0].usedStorage)
+    setTotalFiles(data.storage[0].totalFiles)    
+  }
+  useEffect(() => { 
+    getStorage()
+  }, [])
+
   const storageLimit = 200 * 1024 * 1024 // 200 MB Limit
   const usagePercentage = (totalSize / storageLimit) * 100
 
-  const fileTypeStats = mockFiles.reduce(
-    (acc, file) => {
-      const type = file.type.split("/")[0]
-      if (!acc[type]) {
-        acc[type] = { count: 0, size: 0 }
-      }
-      acc[type].count++
-      acc[type].size += file.size
-      return acc
-    },
-    {} as Record<string, { count: number; size: number }>,
-  )
+  
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
@@ -31,40 +30,6 @@ export default function StoragePage() {
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "image":
-        return ImageIcon
-      case "video":
-        return Video
-      case "audio":
-        return Music
-      case "text":
-        return FileText
-      case "application":
-        return Archive
-      default:
-        return FileText
-    }
-  }
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "image":
-        return "text-green-600"
-      case "video":
-        return "text-blue-600"
-      case "audio":
-        return "text-purple-600"
-      case "text":
-        return "text-orange-600"
-      case "application":
-        return "text-red-600"
-      default:
-        return "text-gray-600"
-    }
   }
 
   return (
@@ -105,7 +70,7 @@ export default function StoragePage() {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-2xl font-bold">{mockFiles.length}</p>
+                  <p className="text-2xl font-bold">{totalFiles}</p>
                   <p className="text-sm text-muted-foreground">Total Files</p>
                 </div>
               </div>

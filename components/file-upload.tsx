@@ -71,6 +71,8 @@ export function FileUpload({ onUpload, bucketName = "user-files" }: FileUploadPr
 
       if (error) throw error
 
+      updateStorage(uploadingFile.file.size)
+
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
@@ -154,6 +156,20 @@ export function FileUpload({ onUpload, bucketName = "user-files" }: FileUploadPr
       })
     },
   })
+
+  async function getStorage() {
+    const response = await fetch("/api/storage")
+    const data = await response.json()
+    return data.storage
+  }
+
+  async function updateStorage(size: number) {
+    const response = await fetch("/api/storage", {
+      method: "POST",
+      body: JSON.stringify({size}),
+    })
+    const data = await response.json()
+  }
 
   return (
     <div className="space-y-4">
