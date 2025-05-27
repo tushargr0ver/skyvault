@@ -1,22 +1,39 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { FileGrid } from "@/components/file-grid"
 import { FileList } from "@/components/file-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Grid, List, Clock, Calendar } from "lucide-react"
-import { mockFiles } from "@/lib/mock-data"
+import {useAuth} from "@clerk/nextjs"
+import {supabase} from "@/lib/supabase"
+
+interface FileObject {
+  id: string
+  name: string
+  size: number
+  type: string
+  uploadedAt: string
+  url: string
+  path: string
+  userId: string
+}
 
 export default function RecentFilesPage() {
+  const {userId, isLoaded} = useAuth()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [files, setFiles] = useState(mockFiles)
+  const [files, setFiles] = useState<FileObject[]>([])
+  const [loading, setLoading] = useState(true)
+  useEffect(()=>{
+    fetchUserFiles()
+  }, [userId, isLoaded])
 
   // Sort files by most recent first
   const recentFiles = [...files]
     .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
-    .slice(0, 10) // Show only last 10 files
+    .slice(0, 100) // Show only last 10 files
 
   const todayFiles = recentFiles.filter((file) => {
     const fileDate = new Date(file.uploadedAt)
@@ -38,12 +55,97 @@ export default function RecentFilesPage() {
     return fileDate < yesterday
   })
 
-  const handleFileDelete = (fileId: string) => {
-    setFiles((prev) => prev.filter((file) => file.id !== fileId))
+  const handleFileDelete = async (fileId: string) => {
+    setFiles((prev) => prev.filter((file) => file.name !== fileId))
+    await deleteUserFile(fileId)
+    await fetchUserFiles()
   }
 
-  const handleFileRename = (fileId: string, newName: string) => {
-    setFiles((prev) => prev.map((file) => (file.id === fileId ? { ...file, name: newName } : file)))
+  const handleFileRename = async (fileId: string, newName: string) => {
+    setFiles((prev) => prev.map((file) => (file.name === fileId ? { ...file, name: newName } : file)))
+    await renameUserFile(fileId, newName)
+    await fetchUserFiles()
+  }
+
+  async function deleteUserFile(fileName: string) {
+    const filePath = `${userId}/${fileName}`
+    const { error } = await supabase.storage
+      .from('user-files')
+      .remove([filePath])
+  }
+
+  async function renameUserFile(oldFilename: string, newFilename: string) {
+    const oldPath = `${userId}/${oldFilename}`
+    const newPath = `${userId}/${newFilename}`
+    const { error } = await supabase.storage
+      .from('user-files')
+      .move(oldPath, newPath)
+  }
+
+  async function fetchUserFiles() {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!userId) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('user-files')
+        .list(userId, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' }
+        })
+
+      if (error) {
+        throw error
+      }
+
+      if (!data || data.length === 0) {
+        setFiles([])
+        return
+      }
+
+      const userFiles = await Promise.all(
+        data.map(async (file) => {
+          const filePath = `${userId}/${file.name}`
+          const { data } = await supabase.storage
+            .from('user-files')
+            .createSignedUrl(filePath, 3600)
+          
+          return {
+            id: file.id,
+            name: file.name,
+            size: file.metadata?.size || 0,
+            type: file.metadata?.mimetype || 'application/octet-stream',
+            uploadedAt: file.created_at,
+            url: data?.signedUrl || '',
+            path: filePath,
+            userId: userId
+          }
+        })
+      )
+      
+      setFiles(userFiles)
+    } catch (error) {
+      setFiles([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   const FileSection = ({ title, files, icon: Icon }: { title: string; files: any[]; icon: any }) => {
@@ -65,6 +167,8 @@ export default function RecentFilesPage() {
       </div>
     )
   }
+
+  
 
   return (
     <DashboardLayout>
@@ -127,7 +231,7 @@ export default function RecentFilesPage() {
                 <Clock className="h-4 w-4 text-purple-600" />
                 <div>
                   <p className="text-lg font-semibold">{recentFiles.length}</p>
-                  <p className="text-sm text-muted-foreground">Last 10 files</p>
+                  <p className="text-sm text-muted-foreground">All Time</p>
                 </div>
               </div>
             </CardContent>

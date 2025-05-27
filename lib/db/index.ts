@@ -1,10 +1,11 @@
+
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import * as schema from './schema'
 
-async function main() {
-    // Disable prefetch as it is not supported for "Transaction" pool mode 
-    const client = postgres(process.env.DATABASE_URL!, { prepare: false })
-    const db = drizzle({ client });
-}
+// Disable prefetch as it is not supported for "Transaction" pool mode 
+const client = postgres(process.env.DATABASE_URL!, { prepare: false })
+export const db = drizzle(client, { schema })
 
-main();
+// Export the client for direct use if needed
+export { client }

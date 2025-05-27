@@ -1,4 +1,4 @@
-import { integer, pgTable, varchar,uuid,timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
 export const storage = pgTable("storage", {
     userId: varchar("user_id", { length: 255 }).notNull().primaryKey(),

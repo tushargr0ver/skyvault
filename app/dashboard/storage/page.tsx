@@ -9,7 +9,7 @@ import { mockFiles } from "@/lib/mock-data"
 export default function StoragePage() {
   // Calculate storage statistics from mock data
   const totalSize = mockFiles.reduce((acc, file) => acc + file.size, 0)
-  const storageLimit = 5 * 1024 * 1024 * 1024 // 5GB limit
+  const storageLimit = 200 * 1024 * 1024 // 200 MB Limit
   const usagePercentage = (totalSize / storageLimit) * 100
 
   const fileTypeStats = mockFiles.reduce(
