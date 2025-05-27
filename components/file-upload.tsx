@@ -57,7 +57,8 @@ export function FileUpload({ onUpload, bucketName = "user-files" }: FileUploadPr
 
     try {
       const fileExt = uploadingFile.file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substr(2, 9)}.${fileExt}`
+      const fileWithoutExt = uploadingFile.file.name.split('.').slice(0, -1).join('.')
+      const fileName = `${fileWithoutExt}_${Math.random().toString(36).substr(2, 4)}.${fileExt}`
       // Store files in user-specific folders
       const filePath = `${userId}/${fileName}`
 
@@ -74,8 +75,6 @@ export function FileUpload({ onUpload, bucketName = "user-files" }: FileUploadPr
       const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filePath)
-
-      console.log('Generated URL:', publicUrl)
 
       // Create file data
       const fileData = {

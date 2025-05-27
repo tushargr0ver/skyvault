@@ -27,7 +27,7 @@ export function RenameDialog({ file, open, onClose, onRename }: RenameDialogProp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (newName.trim() && file) {
-      onRename(file.id, newName.trim())
+      onRename(file.name, newName.trim())
       onClose()
     }
   }

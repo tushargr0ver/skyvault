@@ -21,7 +21,7 @@ interface DeleteConfirmDialogProps {
 export function DeleteConfirmDialog({ file, open, onClose, onDelete }: DeleteConfirmDialogProps) {
   const handleDelete = () => {
     if (file) {
-      onDelete(file.id)
+      onDelete(file.name)
       onClose()
     }
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { FileUpload } from "@/components/file-upload"
 import { FileGrid } from "@/components/file-grid"
@@ -9,60 +9,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Grid, List, Search, SortAsc } from "lucide-react"
-import { mockFiles } from "@/lib/mock-data"
 import { useAuth } from "@clerk/nextjs"
 import { supabase } from "@/lib/supabase"
 
+interface FileObject {
+  id: string
+  name: string
+  size: number
+  type: string
+  uploadedAt: string
+  url: string
+  path: string
+  userId: string
+}
+
 export default function Dashboard() {
-  const { userId } = useAuth()
+  const { userId, isLoaded } = useAuth()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("name")
-  const [files, setFiles] = useState(mockFiles)
+  const [files, setFiles] = useState<FileObject[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function fetchUserFiles() {
-      if (!userId) return
-
-      try {
-        const { data, error } = await supabase.storage
-          .from('user-files')
-          .list(`${userId}/`)
-
-        if (error) throw error
-
-        // Transform the data to match your file interface
-        const userFiles = await Promise.all(
-          data.map(async (file) => {
-            const { data: { publicUrl } } = supabase.storage
-              .from('user-files')
-              .getPublicUrl(`${userId}/${file.name}`)
-
-            return {
-              id: file.id,
-              name: file.name,
-              size: file.metadata?.size || 0,
-              type: file.metadata?.mimetype || 'application/octet-stream',
-              uploadedAt: file.created_at,
-              url: publicUrl,
-              path: `${userId}/${file.name}`
-            }
-          })
-        )
-        
-        setFiles(userFiles)
-      } catch (error) {
-        console.error('Error fetching files:', error)
-        // Keep mock files as fallback
-        setFiles(mockFiles)
-      } finally {
-        setLoading(false)
-      }
-    }
+  useEffect(() => {    
 
     fetchUserFiles()
-  }, [userId])
+  }, [userId, isLoaded])
 
   const filteredFiles = files
     .filter((file) => file.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -79,16 +51,21 @@ export default function Dashboard() {
       }
     })
 
-  const handleFileUpload = (newFiles: any[]) => {
+  const handleFileUpload = async (newFiles: FileObject[]) => {
     setFiles((prev) => [...newFiles, ...prev])
+    await fetchUserFiles()
   }
 
-  const handleFileDelete = (fileId: string) => {
-    setFiles((prev) => prev.filter((file) => file.id !== fileId))
+  const handleFileDelete = async (fileId: string) => {
+    setFiles((prev) => prev.filter((file) => file.name !== fileId))
+    await deleteUserFile(fileId)
+    await fetchUserFiles()
   }
 
-  const handleFileRename = (fileId: string, newName: string) => {
-    setFiles((prev) => prev.map((file) => (file.id === fileId ? { ...file, name: newName } : file)))
+  const handleFileRename = async (fileId: string, newName: string) => {
+    setFiles((prev) => prev.map((file) => (file.name === fileId ? { ...file, name: newName } : file)))
+    await renameUserFile(fileId, newName)
+    await fetchUserFiles()
   }
 
   if (loading) {
@@ -99,6 +76,82 @@ export default function Dashboard() {
         </div>
       </DashboardLayout>
     )
+  }
+  
+  async function deleteUserFile(fileName: string) {
+    const filePath = `${userId}/${fileName}`  // Construct the full path
+    const { error } = await supabase.storage
+      .from('user-files')  // Remove the userId from the bucket name
+      .remove([filePath])  // Use the full path
+  }
+
+  async function renameUserFile(oldFilename: string, newFilename: string) {
+    const oldPath = `${userId}/${oldFilename}`
+    const newPath = `${userId}/${newFilename}`
+  
+    const { error } = await supabase.storage
+      .from('user-files')
+      .move(oldPath, newPath)
+  }
+
+  async function fetchUserFiles() {
+    if (!isLoaded) {
+      return
+    }
+
+    if (!userId) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      // List files in the user's folder
+      const { data, error } = await supabase.storage
+        .from('user-files')
+        .list(userId, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' }
+        })
+
+      if (error) {
+        console.error('Supabase storage error:', error)
+        throw error
+      }
+
+      if (!data || data.length === 0) {
+        setFiles([])
+        return
+      }
+
+      // Transform the data to match your file interface
+      const userFiles = await Promise.all(
+        data.map(async (file) => {
+          const filePath = `${userId}/${file.name}`
+          const { data } = await supabase.storage
+            .from('user-files')
+            .createSignedUrl(filePath, 3600)
+          
+          return {
+            id: file.id,
+            name: file.name,
+            size: file.metadata?.size || 0,
+            type: file.metadata?.mimetype || 'application/octet-stream',
+            uploadedAt: file.created_at,
+            url: data?.signedUrl || '',
+            path: filePath,
+            userId: userId
+          }
+        })
+      )
+      
+      setFiles(userFiles)
+    } catch (error) {
+      console.error('Error fetching files:', error)
+      setFiles([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
