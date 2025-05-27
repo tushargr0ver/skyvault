@@ -56,7 +56,7 @@ SkyVault is a powerful cloud storage platform that provides a seamless experienc
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/skyvault.git
+git clone https://github.com/tushargr0ver/skyvault.git
 cd skyvault
 ```
 
@@ -76,15 +76,15 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 CLERK_SECRET_KEY=your_clerk_secret_key
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+DATABASE_URL=""
+NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/dashboard
+NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/dashboard
 ```
 
 4. Set up the database:
 
 ```bash
-npm run db:push
-# or
-yarn db:push
+npx drizzle-kit push
 ```
 
 5. Run the development server:
